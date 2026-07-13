@@ -1,0 +1,38 @@
+
+
+class apb_monitor extends uvm_monitor;
+  `uvm_component_utils(apb_monitor)
+  
+  uvm_analysis_port #(apb_transaction) ap;
+  
+  virtual apb_if vif;
+  
+  function new(string name="apb_monitor", uvm_component parent);
+    super.new(name,parent);
+  endfunction
+  
+  virtual function void build_phase(uvm_phase phase);
+    super.build_phase(phase);
+    ap=new("ap",this);
+    if(!uvm_config_db #(virtual apb_if)::get(this, "*","vif",vif))
+      `uvm_fatal("NO_VIRTUAL", "No interface found");
+  endfunction
+  
+  task run_phase(uvm_phase phase);
+    apb_transaction trans;
+    forever begin
+      @vif.cb;
+      if(vif.cb.PSEL & vif.cb.PREADY & vif.cb.PENABLE)
+        begin
+          trans=apb_transaction::type_id::create("trans");
+          trans.PADDR=vif.cb.PADDR;
+          trans.PWRITE=vif.cb.PWRITE;
+          trans.PWDATA=vif.cb.PWDATA;
+          trans.PRDATA=vif.cb.PRDATA;
+          trans.PSLVERR=vif.cb.PSLVERR;
+          ap.write(trans);
+        end
+    end
+    
+  endtask
+endclass
