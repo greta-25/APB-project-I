@@ -1,0 +1,51 @@
+
+
+class apb_scoreboard extends uvm_scoreboard;
+  `uvm_component_utils(apb_scoreboard)
+  uvm_analysis_imp #(apb_transaction, apb_scoreboard)axp; // uvm_tlm_analysis_fifo #(apb_transaction) fifo;
+  
+  logic [31:0] ref_mem[0:3];
+  
+  function new (string name="apb_scoreboard", uvm_component parent);
+    super.new(name, parent);
+  endfunction
+  
+  virtual function void build_phase(uvm_phase phase);
+    super.build_phase(phase);
+    axp=new("axp",this); //fifo=new("fifo",this)
+    ref_mem[0]=0;
+    ref_mem[1]=0;
+    ref_mem[2]=0;
+    ref_mem[3]=0;
+    
+  endfunction
+  
+  virtual function void write(apb_transaction trans);
+    if(trans.PSLVERR)begin
+      check_error(trans);
+      
+    end else if (trans.PWRITE) begin
+      check_write(trans);
+    end
+    else begin
+      check_read(trans);
+    end
+  endfunction
+  
+  
+  virtual task run_phase(uvm_phase phase);
+    apb_transaction trans;
+    forever begin
+      fifo.get(trans);
+      if(trans.PSLVERR)begin
+      check_error(trans);
+      
+    end else if (trans.PWRITE) begin
+      check_write(trans);
+    end
+    else begin
+      check_read(trans);
+    end
+    end
+  endtask
+endclass
