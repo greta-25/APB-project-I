@@ -1,0 +1,67 @@
+    
+class apb_driver extends uvm_driver #(apb_transaction);
+  `uvm_component_utils(apb_driver)
+  
+  virtual apb_if vif;
+  
+  function new (string name="apb_driver", uvm_component parent);
+    super.new(name,parent);
+  endfunction
+  
+  virtual function void build_phase(uvm_phase phase);
+    super.build_phase(phase);
+    if(!uvm_config_db #(virtual apb_if)::get(this, "*","vif",vif))
+       `uvm_fatal("NO_VIRTUAL", "No interface found");
+       
+    
+  endfunction
+       
+       task run_phase(uvm_phase phase);
+         forever begin
+           seq_item_port.get_next_item(req);
+           if (req.PWRITE)
+             drive_write(req);
+           else
+             drive_read(req);
+           seq_item_port.item_done();
+         end
+       endtask
+       
+       task drive_write(apb_transaction trans);
+         @vif.cb;
+         vif.cb.PADDR<=trans.PADDR;
+         vif.cb.PSEL<=1;
+         vif.cb.PWRITE<=1;
+         vif.cb.PENABLE<=0;
+         vif.cb.PWDATA<=trans.PWDATA;
+         @vif.cb;
+         vif.cb.PENABLE<=1;
+         
+         @vif.cb;
+         while(!vif.cb.PREADY)begin
+           @(vif.cb);
+         end
+         vif.cb.PENABLE<=0;
+         vif.cb.PSEL<=0;
+       endtask
+       
+  
+  task drive_read(apb_transaction trans);
+    @vif.cb;
+    vif.cb.PSEL<=1;
+    vif.cb.PWRITE<=0;
+    vif.cb.PENABLE<=0;
+    vif.cb.PADDR<=trans.PADDR;
+    @vif.cb;
+    vif.cb.PENABLE<=1;
+    @vif.cb;
+    while(!vif.cb.PREADY)begin
+      @(vif.cb);
+    end
+    trans.PRDATA=vif.cb.PRDATA;
+    vif.cb.PENABLE<=0;
+    vif.cb.PSEL<=0;
+    
+  endtask
+       
+endclass
