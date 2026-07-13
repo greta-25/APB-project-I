@@ -1,0 +1,18 @@
+class apb_transaction extends uvm_object;
+      `uvm_object_utils(apb_transaction)
+      rand bit [7:0] PADDR;
+      rand bit [31:0] PWDATA;
+      rand bit PWRITE;
+      
+      bit [31:0] PRDATA;
+      bit PSLVERR;
+      
+      constraint addr_range_c{
+        PADDR inside {[0:3]};
+      }
+      
+      function new(string name="apb_transaction");
+        super.new(name);
+      endfunction
+    endclass
+    
